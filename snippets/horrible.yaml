@@ -1,0 +1,14 @@
+Resources:
+  WebServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          yum update -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} \
+            --resource WebServer \
+            --region ${AWS::Region}
+
+      ImageId: ami-55ef662f55ef
