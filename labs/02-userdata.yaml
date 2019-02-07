@@ -1,0 +1,25 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'UserData demo'
+
+Parameters:
+  BucketName:
+    Type: String
+
+Resources:
+  MyVM:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: xxxx
+      InstanceType: t2-micro
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install nginx
+          systemctl start nginx
+          systemctl enable nginx
+          systemctl status nginx > /tmp/status
+          aws s3 cp /tmp/status s3://${BucketName}
+         
+           
