@@ -8,14 +8,15 @@ Description: |
 Parameters:
   HtmlPageContent:
     Type: String
-    Default: "Hello AWS Heros!"
-  Environment:
+    Default: "nginx"
+  HtmlBackgroundColor:
     Type: String
     AllowedValues:
-    - production
-    - non-production
+    - red
+    - '#f4842c' # orange
+    - '#7CBB29' # Green  
 
-Mapping:
+Mappings:
   RegionToEc2Image:
     us-east-1: # Virginia
       amzonLinux2: ami-035be7bafff33b6b6
@@ -25,7 +26,7 @@ Mapping:
       ubuntu: ami-00035f41c82244dab
 
 Conditions:
-  IsProd: !Equals [ !Ref Environment, production ]
+  IsCustomizedContent: !Not [!Equals [ !Ref HtmlPageContent, nginx ]]
 
 Resources:
   MyBucket:
@@ -35,8 +36,9 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !FindInMap [RegionToEc2Image, !Ref 'AWS::Region', amzonLinux2]
+      KeyName: virginia_all_amz_meetup
       InstanceType: t2.micro
-      InstanceProfile: !ImportValue EC2ProfileS3ReadAccess
+      IamInstanceProfile: !ImportValue EC2ProfileS3ReadAccess
       SecurityGroups:
         - !ImportValue WebAccess 
       UserData:
@@ -44,15 +46,18 @@ Resources:
         - |
           #!/bin/bash
           yum update -y
-          yum install nginx -y
-      
+          # yum install nginx -y
+          amazon-linux-extras install nginx1.12 -y
+
           systemctl start nginx
-          systemctl enable nginx;
-          aws s3 sync s3://${bucket} /usr/share/nginx/html --region ${region}
+          systemctl enable nginx
+          (crontab -l 2>/dev/null; echo "*/1 * * * * aws s3 sync s3://${bucket} /usr/share/nginx/html --region ${region} --exact-timestamps") | crontab -
+          
         - region: !Ref AWS::Region
           bucket: !Ref MyBucket
   GenerateHtmlFunction:
     Type: AWS::Lambda::Function
+    Condition: IsCustomizedContent
     Properties:
       Handler: "index.handler"
       Runtime: "nodejs8.10"
@@ -62,25 +67,31 @@ Resources:
         ZipFile: |
          const response= require('cfn-response');
          const AWS = require('aws-sdk');
-        const s3 = new AWS.S3();
+         const s3 = new AWS.S3();
+         
+         function getHtml(content, backgroundColor) {
+           return [
+             '<!doctype html>',
+             '<html>',
+              '<head>',
+              '  <title>Meetup 25</title> ',
+              '  <style>.fullscreen {display:flex; width:100%;height:100vh;justify-content:center;align-items:center}</style>',
+              '</head>',
+              '<body style="background: '+ backgroundColor +';" class="fullscreen">',
+              '  <h1 style="color: white;font-size: 60px;">'+ content +'</h1>',
 
-         function uploadHtmlIndexFile( content,  destinationBucket) {
+              '</body>',
+            '</html>'
+           ].join('\n');
+         };
 
-           const htmlContent = `
-            <html>
-              <title>Meetup 25</title>
-              <body style="display:flex; width:100%;height:100vh;justify-content:center">
-                <h1 style="color: orange">${content}</h1>
-              </body>
-            </html>
-           `;
-
+         function uploadFile( content, destinationBucket) {
            return new Promise((resolve, reject) => {
               
               s3.putObject({
                 Bucket: destinationBucket,
                 Key: 'index.html',
-                Body: new Buffer(htmlContent, 'binary')
+                Body: new Buffer(content, 'binary')
               }, function (err) {
                 if (err) { 
                   reject(err);
@@ -95,10 +106,14 @@ Resources:
               return response.send(event, context, response.SUCCESS);
            }
 
-           if (event.RequestType === 'Create') {
+           if (event.RequestType === 'Create' || event.RequestType === 'Update') {
              const content= event.ResourceProperties.HtmlContent;
+             const backgroundColor = event.ResourceProperties.HtmlBackgroundColor;
              const bucket= event.ResourceProperties.Bucket;
-             uploadHtmlIndexFile(content, bucket).then(() => {
+
+             const htmlContent = getHtml(content, backgroundColor);
+
+             uploadFile(htmlContent, bucket).then(() => {
                 response.send(event, context, response.SUCCESS, {});
              }).catch((error) => {
                console.log(error);
@@ -107,16 +122,18 @@ Resources:
            }
          };
   HtmlGenerator:
-    Type: Custom::GenerateHtmlFunction
+    Type: Custom::HtmlGenerator
+    Condition: IsCustomizedContent
+    DependsOn: MyBucket
     Properties:
       ServiceToken: !GetAtt GenerateHtmlFunction.Arn
       HtmlContent: !Ref HtmlPageContent
+      HtmlBackgroundColor: !Ref HtmlBackgroundColor
       Bucket: !Ref MyBucket
 
 
 Outputs:
-  Output:
-    WebsiteURL:
-      Value:
-        !Sub 'http://${MyWebServerVM.PublicDnsName}'
-      Description: URL For the website
+  WebsiteURL:
+    Value:
+      !Sub 'http://${MyWebServerVM.PublicDnsName}'
+    Description: URL For the website
