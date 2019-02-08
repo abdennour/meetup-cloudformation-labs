@@ -142,15 +142,15 @@ Resources:
 
   DNSRecord:
     Type: AWS::Route53::RecordSetGroup
-    DependsOn: MyWebServerVM
+    # DependsOn: MyWebServerVM
     Properties:
-      HostedZoneName: !Ref DomainName
-      Comment: DNS name for the webserver instance.
+      HostedZoneName: !Join ['', [!Ref DomainName, '.']]
       Name: !Join ['', [!Ref SubdomainName, '.']]
       Type: A
       TTL: '60'
       ResourceRecords:
       - !GetAtt MyWebServerVM.PublicIp
+
 
 Outputs:
   FQDN:
