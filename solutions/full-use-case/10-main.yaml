@@ -36,7 +36,6 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !FindInMap [RegionToEc2Image, !Ref 'AWS::Region', amzonLinux2]
-      KeyName: virginia_all_amz_meetup
       InstanceType: t2.micro
       IamInstanceProfile: !ImportValue EC2ProfileS3ReadAccess
       SecurityGroups:
