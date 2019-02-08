@@ -1,0 +1,41 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'S3 bucket contains HTML files of static website'
+Mappings:
+  RegionToEc2Image:
+    us-east-1: # Virginia
+      amzonLinux2: ami-035be7bafff33b6b6
+      ubuntu: ami-0ac019f4fcb7cb7e6
+    eu-west-1: # Ireland
+      amzonLinux2: ami-0fad7378adf284ce0
+      ubuntu: ami-00035f41c82244dab
+Resources:
+  MyBucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      AccessControl: PublicReadWrite
+  
+  MyWebServerVM:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [RegionToEc2Image, !Ref 'AWS::Region', amzonLinux2]
+      InstanceType: t2.micro
+      SecurityGroups: 
+      - !ImportValue WebAccess
+      UserData:
+        Fn::Base64: !Sub
+        - |
+          #!/bin/bash
+          yum update -y
+          amazon-linux-extras install nginx1.12 -y
+          systemctl start nginx
+          systemctl enable nginx
+          echo "<h1> Demo User Data </h1> <h2>Bucket Name : ${bucket}</h2>" > /usr/share/nginx/html/index.html
+
+        - bucket: !Ref MyBucket
+
+Outputs:
+  WebsiteURL:
+    Value:
+      !Sub 'http://${MyWebServerVM.PublicDnsName}'
+    Description: URL For the website
