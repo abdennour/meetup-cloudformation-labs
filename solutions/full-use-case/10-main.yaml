@@ -141,7 +141,7 @@ Resources:
       Bucket: !Ref MyBucket
 
   DNSRecord:
-    Type: AWS::Route53::RecordSetGroup
+    Type: AWS::Route53::RecordSet
     # DependsOn: MyWebServerVM
     Properties:
       HostedZoneName: !Join ['', [!Ref DomainName, '.']]
@@ -154,7 +154,7 @@ Resources:
 
 Outputs:
   FQDN:
-    Value: http://aws.acloudguru.tn
+    Value: !Sub 'http://${SubdomainName}'
   WebsiteURL:
     Value:
       !Sub 'http://${MyWebServerVM.PublicDnsName}'
