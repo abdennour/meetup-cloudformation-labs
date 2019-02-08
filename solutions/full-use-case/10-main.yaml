@@ -15,7 +15,13 @@ Parameters:
     - red
     - '#f4842c' # orange
     - '#7CBB29' # Green  
-
+  DomainName:
+    Type: String
+    Default: acloudguru.tn
+  SubdomainName:
+    Type: String
+    Default: aws.acloudguru.tn
+    
 Mappings:
   RegionToEc2Image:
     us-east-1: # Virginia
@@ -134,8 +140,21 @@ Resources:
       HtmlBackgroundColor: !Ref HtmlBackgroundColor
       Bucket: !Ref MyBucket
 
+  DNSRecord:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn: MyWebServerVM
+    Properties:
+      HostedZoneName: !Ref DomainName
+      Comment: DNS name for the webserver instance.
+      Name: !Join ['', [!Ref SubdomainName, '.']]
+      Type: A
+      TTL: '60'
+      ResourceRecords:
+      - !GetAtt MyWebServerVM.PublicIp
 
 Outputs:
+  FQDN:
+    Value: http://aws.acloudguru.tn
   WebsiteURL:
     Value:
       !Sub 'http://${MyWebServerVM.PublicDnsName}'
