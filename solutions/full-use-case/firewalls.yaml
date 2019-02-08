@@ -1,0 +1,21 @@
+Resources:
+  WebSecurityGroup:
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+    GroupDescription: Allow web users to access
+    SecurityGroupIngress:
+    - CidrIp: 0.0.0.0/0
+      Description: Allow HTTP access
+      FromPort: 80
+      IpProtocol: tcp
+      ToPort: 80
+    - CidrIp: 0.0.0.0/0
+      Description: Allow HTTPS access
+      FromPort: 443
+      IpProtocol: tcp
+      ToPort: 443
+Outputs:
+  WebAccessFirewall:
+    Value: !Ref WebSecurityGroup
+    Export:
+      Name: WebAccess
