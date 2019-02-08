@@ -13,7 +13,7 @@ Parameters:
 Mapping:
   RegionToEc2Image:
     us-east-1: # Virginia
-      amzonLinux2: ami-0217d483951e4cec3
+      amzonLinux2: ami-035be7bafff33b6b6
       ubuntu: ami-0ac019f4fcb7cb7e6
     eu-west-1: # Ireland
       amzonLinux2: ami-0fad7378adf284ce0
