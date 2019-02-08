@@ -9,6 +9,11 @@ Parameters:
   HtmlPageContent:
     Type: String
     Default: "Hello AWS Heros!"
+  Environment:
+    Type: String
+    AllowedValues:
+    - production
+    - non-production
 
 Mapping:
   RegionToEc2Image:
@@ -18,11 +23,15 @@ Mapping:
     eu-west-1: # Ireland
       amzonLinux2: ami-0fad7378adf284ce0
       ubuntu: ami-00035f41c82244dab
+
+Conditions:
+  IsProd: !Equals [ !Ref Environment, production ]
+
 Resources:
   MyBucket:
     Type: AWS::S3::Bucket
     
-  MyWebServer:
+  MyWebServerVM:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !FindInMap [RegionToEc2Image, !Ref 'AWS::Region', amzonLinux2]
@@ -39,7 +48,7 @@ Resources:
       
           systemctl start nginx
           systemctl enable nginx;
-          aws s3 sync s3://${bucket} /usr/share/nginx/html --region ${region} 
+          aws s3 sync s3://${bucket} /usr/share/nginx/html --region ${region}
         - region: !Ref AWS::Region
           bucket: !Ref MyBucket
   GenerateHtmlFunction:
@@ -103,4 +112,11 @@ Resources:
       ServiceToken: !GetAtt GenerateHtmlFunction.Arn
       HtmlContent: !Ref HtmlPageContent
       Bucket: !Ref MyBucket
-      
+
+
+Outputs:
+  Output:
+    WebsiteURL:
+      Value:
+        !Sub 'http://${MyWebServerVM.PublicDnsName}'
+      Description: URL For the website
