@@ -22,7 +22,6 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !FindInMap [RegionToEc2Image, !Ref 'AWS::Region', amzonLinux2]
-      KeyName: virginia_all_amz_meetup
       InstanceType: t2.micro
       IamInstanceProfile: !ImportValue EC2ProfileS3ReadAccess
       SecurityGroups:
@@ -112,6 +111,17 @@ Resources:
              });
            }
          };
+
+  DNSRecord:
+    Type: AWS::Route53::RecordSet
+    # DependsOn: MyWebServerVM
+    Properties:
+      HostedZoneName: !Join ['', [!Ref DomainName, '.']]
+      Name: !Join ['', [!Ref SubdomainName, '.']]
+      Type: A
+      TTL: '60'
+      ResourceRecords:
+      - !GetAtt MyWebServerVM.PublicIp
 
   DNSRecord:
     Type: AWS::Route53::RecordSet
