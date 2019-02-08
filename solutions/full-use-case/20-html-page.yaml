@@ -12,8 +12,9 @@ Parameters:
     Type: String
     AllowedValues:
     - red
-    - blue
     - black
+    - gold
+    - midnightblue
     - '#f4842c' # orange
     - '#7CBB29' # Green  
 
