@@ -5,17 +5,6 @@ Description: |
   the EC2 instance download the HTML file from S3 and server it as static website
   using Nginx
 
-Parameters:
-  HtmlPageContent:
-    Type: String
-    Default: "nginx"
-  HtmlBackgroundColor:
-    Type: String
-    AllowedValues:
-    - red
-    - '#f4842c' # orange
-    - '#7CBB29' # Green  
-
 Mappings:
   RegionToEc2Image:
     us-east-1: # Virginia
@@ -24,9 +13,6 @@ Mappings:
     eu-west-1: # Ireland
       amzonLinux2: ami-0fad7378adf284ce0
       ubuntu: ami-00035f41c82244dab
-
-Conditions:
-  IsCustomizedContent: !Not [!Equals [ !Ref HtmlPageContent, nginx ]]
 
 Resources:
   MyBucket:
@@ -40,7 +26,7 @@ Resources:
       InstanceType: t2.micro
       IamInstanceProfile: !ImportValue EC2ProfileS3ReadAccess
       SecurityGroups:
-        - !ImportValue WebAccess 
+        - !ImportValue WebAccess
       UserData:
         Fn::Base64: !Sub
         - |
@@ -57,7 +43,6 @@ Resources:
           bucket: !Ref MyBucket
   GenerateHtmlFunction:
     Type: AWS::Lambda::Function
-    Condition: IsCustomizedContent
     Properties:
       Handler: "index.handler"
       Runtime: "nodejs8.10"
@@ -85,12 +70,12 @@ Resources:
            ].join('\n');
          };
 
-         function uploadFile( content, destinationBucket) {
+         function uploadFile( fileName, content, destinationBucket) {
            return new Promise((resolve, reject) => {
               
               s3.putObject({
                 Bucket: destinationBucket,
-                Key: 'index.html',
+                Key: fileName,
                 Body: new Buffer(content, 'binary')
               }, function (err) {
                 if (err) { 
@@ -105,11 +90,13 @@ Resources:
             const content= event.ResourceProperties.HtmlContent;
             const backgroundColor = event.ResourceProperties.HtmlBackgroundColor;
             const bucket= event.ResourceProperties.Bucket;
+            const fileName = event.ResourceProperties.HtmlFileName;
   
            if (event.RequestType === 'Delete') {
               s3.deleteObject({
                 Bucket: destinationBucket,
-                Key: 'index.html'});
+                Key: fileName
+              });
               return response.send(event, context, response.SUCCESS);
            }
 
@@ -117,7 +104,7 @@ Resources:
 
              const htmlContent = getHtml(content, backgroundColor);
 
-             uploadFile(htmlContent, bucket).then(() => {
+             uploadFile(fileName, htmlContent, bucket).then(() => {
                 response.send(event, context, response.SUCCESS, {});
              }).catch((error) => {
                console.log(error);
@@ -125,15 +112,6 @@ Resources:
              });
            }
          };
-  HtmlGenerator:
-    Type: Custom::HtmlGenerator
-    Condition: IsCustomizedContent
-    DependsOn: MyBucket
-    Properties:
-      ServiceToken: !GetAtt GenerateHtmlFunction.Arn
-      HtmlContent: !Ref HtmlPageContent
-      HtmlBackgroundColor: !Ref HtmlBackgroundColor
-      Bucket: !Ref MyBucket
 
 
 Outputs:
@@ -141,3 +119,12 @@ Outputs:
     Value:
       !Sub 'http://${MyWebServerVM.PublicDnsName}'
     Description: URL For the website
+  HtmlGeneratorFunctionArn:
+    Value: !GetAtt GenerateHtmlFunction.Arn
+    Export:
+      Name: HtmlGeneratorFunctionArn
+  Bucket:
+    Value:  !Ref MyBucket
+    Description: Bucket for Generated HTML files
+    Export:
+      Name: BucketGeneratedHtmlFiles  
