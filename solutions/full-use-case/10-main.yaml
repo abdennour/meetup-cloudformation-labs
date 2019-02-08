@@ -1,10 +1,18 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 Description: |
-  An AWS Lambda creates the HTML file, upload it to S3, 
-  the EC2 instance download the HTML file from S3 and server it as static website
-  using Nginx
+  An AWS Lambda responds to a custom resource and creates an HTML page per custom resource
+  Then, the Lambda function uploads the page to S3
+  An EC2 instance checks the content of S3 each one minute and download it to the root Directoy
+  of the webserver Nginx
 
+Parameters:
+  DomainName:
+    Type: String
+    Default: acloudguru.tn
+  SubdomainName:
+    Type: String
+    Default: aws.acloudguru.tn
 Mappings:
   RegionToEc2Image:
     us-east-1: # Virginia
@@ -111,17 +119,6 @@ Resources:
              });
            }
          };
-
-  DNSRecord:
-    Type: AWS::Route53::RecordSet
-    # DependsOn: MyWebServerVM
-    Properties:
-      HostedZoneName: !Join ['', [!Ref DomainName, '.']]
-      Name: !Join ['', [!Ref SubdomainName, '.']]
-      Type: A
-      TTL: '60'
-      ResourceRecords:
-      - !GetAtt MyWebServerVM.PublicIp
 
   DNSRecord:
     Type: AWS::Route53::RecordSet
