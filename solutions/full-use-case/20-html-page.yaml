@@ -1,0 +1,33 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  HtmlFileName:
+    Type: String
+    Default: "index.html"
+  HtmlPageContent:
+    Type: String
+    Default: "nginx"
+  HtmlBackgroundColor:
+    Type: String
+    AllowedValues:
+    - red
+    - black
+    - gold
+    - midnightblue
+    - '#f4842c' # orange
+    - '#7CBB29' # Green  
+
+Conditions:
+  IsCustomizedContent: !Not [!Equals [ !Ref HtmlPageContent, nginx ]]
+
+Resources:
+  HtmlGenerator:
+    Type: Custom::HtmlGenerator
+    Condition: IsCustomizedContent
+    Properties:
+      ServiceToken: !ImportValue HtmlGeneratorFunctionArn
+      HtmlContent: !Ref HtmlPageContent
+      HtmlBackgroundColor: !Ref HtmlBackgroundColor
+      HtmlFileName: !Ref HtmlFileName
+      Bucket: !ImportValue BucketGeneratedHtmlFiles
