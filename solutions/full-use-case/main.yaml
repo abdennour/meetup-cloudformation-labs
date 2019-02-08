@@ -101,15 +101,19 @@ Resources:
            })
          }
          exports.handler = (event, context) =>  {
+            
+            const content= event.ResourceProperties.HtmlContent;
+            const backgroundColor = event.ResourceProperties.HtmlBackgroundColor;
+            const bucket= event.ResourceProperties.Bucket;
   
            if (event.RequestType === 'Delete') {
+              s3.deleteObject({
+                Bucket: destinationBucket,
+                Key: 'index.html'});
               return response.send(event, context, response.SUCCESS);
            }
 
            if (event.RequestType === 'Create' || event.RequestType === 'Update') {
-             const content= event.ResourceProperties.HtmlContent;
-             const backgroundColor = event.ResourceProperties.HtmlBackgroundColor;
-             const bucket= event.ResourceProperties.Bucket;
 
              const htmlContent = getHtml(content, backgroundColor);
 
